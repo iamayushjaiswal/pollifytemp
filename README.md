@@ -1,94 +1,127 @@
-# votee
+# Votee: A Decentralized Polling dApp
 
-## Getting Started
+**Votee** is a decentralized polling application built on the Solana blockchain, allowing users to create polls, register candidates, and vote in a transparent and secure manner. It leverages modern technologies and blockchain infrastructure to provide an interactive and decentralized voting experience.
 
-### Prerequisites
+## Features
 
-- Node v18.18.0 or higher
+- **Create Polls**: Users can create polls with descriptions, start dates, and end dates.
+- **Register Candidates**: Candidates can register to participate in active polls.
+- **Vote on Polls**: Users can cast votes for registered candidates in active polls.
+- **Real-Time Updates**: Poll details and candidate lists are fetched directly from the blockchain.
+- **Wallet Integration**: Seamlessly connect and interact using Solana-compatible wallets like Phantom.
+- **Toast Notifications**: Get feedback on transactions, including success, pending, or failure statuses.
 
-- Rust v1.77.2 or higher
-- Anchor CLI 0.30.1 or higher
-- Solana CLI 1.18.17 or higher
+---
 
-### Installation
+## Pages
 
-#### Clone the repo
+### 1. **Homepage**
+   - Displays a welcome interface and navigation links for creating polls or voting.
 
-```shell
-git clone <repo-url>
-cd <repo-name>
+### 2. **Create Poll Page**
+   - Form-based interface for creating new polls with fields for:
+     - **Poll Description**: A brief description of the poll's purpose.
+     - **Start Date**: The start date and time of the poll.
+     - **End Date**: The end date and time of the poll.
+
+### 3. **Register Candidate Modal**
+   - Allows candidates to register for a specific poll.
+   - Input field for entering the candidate’s name.
+   - Accessible through an active poll's detail page.
+
+### 4. **Voting Page**
+   - Displays active polls and their registered candidates.
+   - Allows users to vote for their preferred candidate.
+   - Displays real-time voting statistics for transparency.
+
+---
+
+## Technologies Used
+
+- **Frontend**:
+  - Next.js
+  - TypeScript
+  - React
+  - Redux Toolkit
+  - Tailwind CSS
+  - React Icons
+- **Blockchain Integration**:
+  - Solana Web3.js
+  - @coral-xyz/anchor
+  - Solana Wallet Adapter
+  - Phantom Wallet
+- **Notifications**:
+  - React Toastify
+
+---
+
+## Important Note
+
+**Wallet Required**: Before using this dApp, ensure you have a Solana-compatible wallet like Phantom installed. You can download it [here](https://phantom.app/).
+
+**Default Solana Cluster**: The application assumes a local Solana network for development. Ensure your Solana CLI is set to the correct cluster.
+
+```bash
+solana config set --url http://127.0.0.1:8899
 ```
 
-#### Install Dependencies
+## Installation Guide
+1. Clone the Repository
 
-```shell
-pnpm install
+```bash
+git clone https://github.com/YourUsername/votee
+cd votee
 ```
 
-#### Start the web app
-
-```
-pnpm dev
-```
-
-## Apps
-
-### anchor
-
-This is a Solana program written in Rust using the Anchor framework.
-
-#### Commands
-
-You can use any normal anchor commands. Either move to the `anchor` directory and run the `anchor` command or prefix the command with `pnpm`, eg: `pnpm anchor`.
-
-#### Sync the program id:
-
-Running this command will create a new keypair in the `anchor/target/deploy` directory and save the address to the Anchor config file and update the `declare_id!` macro in the `./src/lib.rs` file of the program.
-
-You will manually need to update the constant in `anchor/lib/counter-exports.ts` to match the new program id.
-
-```shell
-pnpm anchor keys sync
+2. Install Dependencies
+```bash
+npm install
 ```
 
-#### Build the program:
+3. Set Up Environment Variables
+Create a .env file in the root directory and add the following variable for local development:
 
-```shell
-pnpm anchor-build
+```sh
+NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8899
 ```
 
-#### Start the test validator with the program deployed:
+4. Run Local Solana Test Validator
+If not already running, start a Solana test validator on your local machine:
 
-```shell
-pnpm anchor-localnet
+```sh
+solana-test-validator
 ```
 
-#### Run the tests
-
-```shell
-pnpm anchor-test
+5. Launch the Development Server
+```sh
+npm run dev
 ```
 
-#### Deploy to Devnet
+6. Build for Production
+For production, build and start the application:
 
-```shell
-pnpm anchor deploy --provider.cluster devnet
+```sh
+npm run build
+npm start
 ```
 
-### web
+## Usage
+* Open the application in your browser: http://localhost:3000.
+    * Connect your wallet using the Wallet Adapter button.
+    * Create a poll, register candidates, and vote directly on the blockchain.
 
-This is a React app that uses the Anchor generated client to interact with the Solana program.
+* pages/:
+    * index.tsx: Homepage.
+    * create.tsx: Poll creation page.
 
-#### Commands
+* services/:
+    * blockchain.service.ts: Functions for interacting with the blockchain (e.g., createPoll, registerCandidate).
 
-Start the web app
+* utils/:
+    * Types and helper functions for application logic.
 
-```shell
-pnpm dev
-```
+## Contributing
+Contributions are welcome! If you have suggestions, feature requests, or bug reports, please create an issue or submit a pull request.
 
-Build the web app
-
-```shell
-pnpm build
-```
+## License
+This project is licensed under the MIT License. See the LICENSE file for more details.
