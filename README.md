@@ -69,7 +69,7 @@ solana config set --url http://127.0.0.1:8899
 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YourUsername/votee
+git clone https://github.com/Daltonic/votee
 cd votee
 ```
 
