@@ -26,9 +26,15 @@ export default function Page() {
   )
 
   const fetchData = async () => {
-    fetchAllPolls(programReadOnly).then((data) => setPolls(data as any))
-    const count = await getCounter(programReadOnly)
-    setIsInitialized(count.gte(new BN(0)))
+    try {
+      const pollsData = await fetchAllPolls(programReadOnly)
+      setPolls(pollsData as any)
+      const count = await getCounter(programReadOnly)
+      setIsInitialized(count.gte(new BN(0)))
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      setIsInitialized(false)
+    }
   }
 
   useEffect(() => {
@@ -37,26 +43,32 @@ export default function Page() {
   }, [programReadOnly])
 
   const handleInit = async () => {
-    // alert(isInitialized && !!publicKey)
-    if (isInitialized && !!publicKey) return
+    if (!publicKey || !program) {
+      toast.error('Please connect your wallet first')
+      return
+    }
+
+    if (isInitialized) {
+      toast.info('Program is already initialized')
+      return
+    }
 
     await toast.promise(
       new Promise<void>(async (resolve, reject) => {
         try {
-          const tx = await initialize(program!, publicKey!)
-          console.log(tx)
-
+          const tx = await initialize(program, publicKey)
+          console.log('Initialization transaction:', tx)
           await fetchData()
-          resolve(tx as any)
+          resolve()
         } catch (error) {
-          console.error('Transaction failed:', error)
+          console.error('Initialization failed:', error)
           reject(error)
         }
       }),
       {
-        pending: 'Approve transaction...',
-        success: 'Transaction successful 👌',
-        error: 'Encountered error 🤯',
+        pending: 'Initializing program...',
+        success: 'Program initialized successfully 👌',
+        error: 'Initialization failed 🤯',
       }
     )
   }
