@@ -23,18 +23,22 @@ export default function AppWalletProvider({
 }) {
   const network = WalletAdapterNetwork.Devnet
   const endpoint = useMemo(() => {
-    return process.env.NEXT_PUBLIC_RPC_URL || 'https://api.devnet.solana.com'
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+    if (!rpcUrl) {
+      console.warn('NEXT_PUBLIC_RPC_URL not set, using default devnet endpoint')
+      return 'https://api.devnet.solana.com'
+    }
+    return rpcUrl
   }, [])
 
   const connection = useMemo(() => new Connection(endpoint, 'confirmed'), [endpoint])
 
   const wallets = useMemo(
     () => [
-      // manually add any legacy wallet adapters here
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
+      new PhantomWalletAdapter({ network }),
+      new SolflareWalletAdapter({ network }),
     ],
-    []
+    [network]
   )
 
   return (

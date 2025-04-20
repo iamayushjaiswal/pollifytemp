@@ -16,17 +16,24 @@ import { toast } from 'react-toastify'
 
 export default function Page() {
   const [polls, setPolls] = useState<Poll[]>([])
-  const { publicKey, signTransaction, sendTransaction } = useWallet()
+  const { publicKey, signTransaction, sendTransaction, connected } = useWallet()
   const [isInitialized, setIsInitialized] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
   const programReadOnly = useMemo(() => getReadonlyProvider(), [])
 
   const program = useMemo(
-    () => getProvider(publicKey, signTransaction, sendTransaction),
+    () => {
+      if (!publicKey || !signTransaction || !sendTransaction) {
+        return null
+      }
+      return getProvider(publicKey, signTransaction, sendTransaction)
+    },
     [publicKey, signTransaction, sendTransaction]
   )
 
   const fetchData = async () => {
     try {
+      setIsLoading(true)
       const pollsData = await fetchAllPolls(programReadOnly)
       setPolls(pollsData as any)
       const count = await getCounter(programReadOnly)
@@ -34,6 +41,9 @@ export default function Page() {
     } catch (error) {
       console.error('Error fetching data:', error)
       setIsInitialized(false)
+      toast.error('Failed to fetch data from blockchain')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -53,59 +63,70 @@ export default function Page() {
       return
     }
 
-    await toast.promise(
-      new Promise<void>(async (resolve, reject) => {
-        try {
-          const tx = await initialize(program, publicKey)
-          console.log('Initialization transaction:', tx)
-          await fetchData()
-          resolve()
-        } catch (error) {
-          console.error('Initialization failed:', error)
-          reject(error)
+    try {
+      await toast.promise(
+        new Promise<void>(async (resolve, reject) => {
+          try {
+            const tx = await initialize(program, publicKey)
+            console.log('Initialization transaction:', tx)
+            await fetchData()
+            resolve()
+          } catch (error) {
+            console.error('Initialization failed:', error)
+            reject(error)
+          }
+        }),
+        {
+          pending: 'Initializing program...',
+          success: 'Program initialized successfully 👌',
+          error: 'Initialization failed 🤯',
         }
-      }),
-      {
-        pending: 'Initializing program...',
-        success: 'Program initialized successfully 👌',
-        error: 'Initialization failed 🤯',
-      }
+      )
+    } catch (error) {
+      console.error('Initialization error:', error)
+      toast.error('Failed to initialize program')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-col items-center py-10">
-      {isInitialized && polls.length > 0 && (
-        <h2 className="bg-gray-800 text-white rounded-full px-6 py-2 text-lg font-bold mb-8">
-          List of Polls
-        </h2>
+      {!connected && (
+        <div className="text-center mb-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Welcome to Pollify</h2>
+          <p className="text-gray-600">Please connect your wallet to continue</p>
+        </div>
       )}
 
-      {isInitialized && polls.length < 1 && (
+      {connected && !isInitialized && (
+        <div className="text-center mb-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Initialize Program</h2>
+          <p className="text-gray-600 mb-4">The program needs to be initialized before you can create polls</p>
+          <button
+            onClick={handleInit}
+            className="bg-gray-800 text-white rounded-full px-6 py-2 text-lg font-bold hover:bg-gray-900 transition-colors"
+          >
+            Initialize
+          </button>
+        </div>
+      )}
+
+      {isInitialized && (
         <>
           <h2 className="bg-gray-800 text-white rounded-full px-6 py-2 text-lg font-bold mb-8">
-            List of Polls
+            {polls.length > 0 ? 'List of Polls' : 'No Polls Yet'}
           </h2>
-          <p>We don&apos;t have any polls yet, be the first to create one.</p>
-        </>
-      )}
-
-      {!isInitialized && publicKey && (
-        <button
-          onClick={handleInit}
-          className="bg-gray-800 text-white rounded-full
-          px-6 py-2 text-lg font-bold mb-8"
-        >
-          Initialize
-        </button>
-      )}
-
-      {!publicKey && polls.length < 1 && (
-        <>
-          <h2 className="bg-gray-800 text-white rounded-full px-6 py-2 text-lg font-bold mb-8">
-            List of Polls
-          </h2>
-          <p>We don&apos;t have any polls yet, please connect wallet.</p>
+          {polls.length === 0 && (
+            <p className="text-gray-600 mb-8">We don&apos;t have any polls yet, be the first to create one.</p>
+          )}
         </>
       )}
 
