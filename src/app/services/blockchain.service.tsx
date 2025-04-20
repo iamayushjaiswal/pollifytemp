@@ -12,7 +12,7 @@ import { store } from '../store'
 import { globalActions } from '../store/globalSlices'
 
 let tx
-const programId = new PublicKey(idl.address)
+const programId = new PublicKey('3EDQFxLqYxWmmfi2HJqTeydsEJ6tq1sqPvDzNW2p9Xqa')
 const { setCandidates, setPoll } = globalActions
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://127.0.0.1:8899'
 
