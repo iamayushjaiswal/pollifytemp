@@ -118,35 +118,46 @@ export const createPoll = async (
   start: number,
   end: number
 ): Promise<TransactionSignature> => {
-  const [counterPDA] = PublicKey.findProgramAddressSync(
-    [Buffer.from('counter')],
-    programId
-  )
-  const [pollPDA] = PublicKey.findProgramAddressSync(
-    [nextCount.toArrayLike(Buffer, 'le', 8)],
-    programId
-  )
+  try {
+    const [counterPDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from('counter')],
+      programId
+    )
+    const [pollPDA] = PublicKey.findProgramAddressSync(
+      [nextCount.toArrayLike(Buffer, 'le', 8)],
+      programId
+    )
 
-  const startBN = new BN(start)
-  const endBN = new BN(end)
+    const startBN = new BN(start)
+    const endBN = new BN(end)
 
-  tx = await program.methods
-    .createPoll(description, startBN, endBN)
-    .accountsPartial({
-      user: publicKey,
-      counter: counterPDA,
-      poll: pollPDA,
-      systemProgram: SystemProgram.programId,
-    })
-    .rpc()
+    // Verify the counter account exists
+    const counter = await program.account.counter.fetch(counterPDA)
+    if (!counter) {
+      throw new Error('Counter account not found. Please initialize the program first.')
+    }
 
-  const connection = new Connection(
-    program.provider.connection.rpcEndpoint,
-    'confirmed'
-  )
-  await connection.confirmTransaction(tx, 'finalized')
+    tx = await program.methods
+      .createPoll(description, startBN, endBN)
+      .accountsPartial({
+        user: publicKey,
+        counter: counterPDA,
+        poll: pollPDA,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc()
 
-  return tx
+    const connection = new Connection(
+      program.provider.connection.rpcEndpoint,
+      'confirmed'
+    )
+    await connection.confirmTransaction(tx, 'finalized')
+
+    return tx
+  } catch (error) {
+    console.error('Create poll error:', error)
+    throw error
+  }
 }
 
 export const registerCandidate = async (

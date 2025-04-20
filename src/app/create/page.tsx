@@ -10,11 +10,14 @@ import {
   getProvider,
 } from '../services/blockchain.service'
 import { useWallet } from '@solana/wallet-adapter-react'
+import { useRouter } from 'next/navigation'
 
 const Page: NextPage = () => {
+  const router = useRouter()
   const { publicKey, sendTransaction, signTransaction } = useWallet()
   const [nextCount, setNextCount] = useState<BN>(new BN(0))
   const [isInitialized, setIsInitialized] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const program = useMemo(
     () => getProvider(publicKey, signTransaction, sendTransaction),
@@ -30,54 +33,98 @@ const Page: NextPage = () => {
   useEffect(() => {
     const fetchCounter = async () => {
       if (!program) return
-      const count = await getCounter(program)
-      setNextCount(count.add(new BN(1)))
-      setIsInitialized(count.gte(new BN(0)))
+      try {
+        const count = await getCounter(program)
+        setNextCount(count.add(new BN(1)))
+        setIsInitialized(count.gte(new BN(0)))
+      } catch (error) {
+        console.error('Error fetching counter:', error)
+        toast.error('Failed to fetch poll counter')
+      }
     }
 
     fetchCounter()
-  }, [program, formData])
+  }, [program])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!program || !isInitialized) return
+    
+    if (!publicKey) {
+      toast.error('Please connect your wallet first')
+      return
+    }
+
+    if (!program) {
+      toast.error('Failed to connect to program')
+      return
+    }
+
+    if (!isInitialized) {
+      toast.error('Please initialize the program first')
+      router.push('/')
+      return
+    }
+
+    if (isSubmitting) return
 
     const { description, startDate, endDate } = formData
 
-    const startTimestamp = new Date(startDate).getTime() / 1000
-    const endTimestamp = new Date(endDate).getTime() / 1000
+    if (!description.trim()) {
+      toast.error('Please enter a description')
+      return
+    }
 
-    await toast.promise(
-      new Promise<void>(async (resolve, reject) => {
-        try {
-          const tx = await createPoll(
-            program!,
-            publicKey!,
-            nextCount,
-            description,
-            startTimestamp,
-            endTimestamp
-          )
+    if (!startDate || !endDate) {
+      toast.error('Please select both start and end dates')
+      return
+    }
 
-          setFormData({
-            description: '',
-            startDate: '',
-            endDate: '',
-          })
+    const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000)
+    const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000)
 
-          console.log(tx)
-          resolve(tx as any)
-        } catch (error) {
-          console.error('Transaction failed:', error)
-          reject(error)
+    if (startTimestamp >= endTimestamp) {
+      toast.error('End date must be after start date')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      await toast.promise(
+        new Promise<void>(async (resolve, reject) => {
+          try {
+            const tx = await createPoll(
+              program,
+              publicKey,
+              nextCount,
+              description,
+              startTimestamp,
+              endTimestamp
+            )
+
+            setFormData({
+              description: '',
+              startDate: '',
+              endDate: '',
+            })
+
+            console.log('Create poll transaction:', tx)
+            resolve()
+            router.push('/')
+          } catch (error) {
+            console.error('Create poll failed:', error)
+            reject(error)
+          }
+        }),
+        {
+          pending: 'Creating poll...',
+          success: 'Poll created successfully 👌',
+          error: 'Failed to create poll 🤯',
         }
-      }),
-      {
-        pending: 'Approve transaction...',
-        success: 'Transaction successful 👌',
-        error: 'Encountered error 🤯',
-      }
-    )
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -98,20 +145,19 @@ const Page: NextPage = () => {
               htmlFor="description"
               className="block text-sm font-semibold text-gray-700"
             >
-              Poll Description
+              Description
             </label>
             <input
               type="text"
               id="description"
-              placeholder="Briefly describe the purpose of this poll..."
-              required
-              className="mt-2 block w-full py-3 px-4 border border-gray-300
-              rounded-lg shadow-sm focus:ring-2 focus:ring-black
-              focus:outline-none bg-gray-100 text-gray-800"
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+              focus:border-indigo-500 focus:ring-indigo-500"
+              placeholder="Enter poll description"
+              required
             />
           </div>
 
@@ -125,14 +171,13 @@ const Page: NextPage = () => {
             <input
               type="datetime-local"
               id="startDate"
-              required
-              className="mt-2 block w-full py-3 px-4 border border-gray-300
-              rounded-lg shadow-sm focus:ring-2 focus:ring-black
-              focus:outline-none bg-gray-100 text-gray-800"
               value={formData.startDate}
               onChange={(e) =>
                 setFormData({ ...formData, startDate: e.target.value })
               }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+              focus:border-indigo-500 focus:ring-indigo-500"
+              required
             />
           </div>
 
@@ -146,27 +191,25 @@ const Page: NextPage = () => {
             <input
               type="datetime-local"
               id="endDate"
-              required
-              className="mt-2 block w-full py-3 px-4 border border-gray-300
-              rounded-lg shadow-sm focus:ring-2 focus:ring-black
-              focus:outline-none bg-gray-100 text-gray-800"
               value={formData.endDate}
               onChange={(e) =>
                 setFormData({ ...formData, endDate: e.target.value })
               }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+              focus:border-indigo-500 focus:ring-indigo-500"
+              required
             />
           </div>
 
-          <div className="flex justify-center w-full">
-            <button
-              type="submit"
-              disabled={!program || !isInitialized}
-              className="bg-black text-white font-bold py-3 px-6 rounded-lg
-              hover:bg-gray-900 transition duration-200 w-full disabled:bg-opacity-70"
-            >
-              Create Poll
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting || !isInitialized}
+            className="w-full bg-gray-800 text-white font-bold py-2 px-4 rounded-lg
+            hover:bg-gray-900 transition duration-200 disabled:opacity-50
+            disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? 'Creating...' : 'Create Poll'}
+          </button>
         </form>
       </div>
     </div>
